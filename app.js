@@ -1,5 +1,6 @@
 const app = require('express')();
 const MongoClient = require('mongodb').MongoClient;
+app.set('view engine', 'ejs');
 
 MongoClient.connect('mongodb://localhost:27017/moma', (err, db) => {
   if (err) throw err;
@@ -10,7 +11,7 @@ MongoClient.connect('mongodb://localhost:27017/moma', (err, db) => {
         .aggregate(
           [{ $match: { URL: { $ne: null } } }, { $sample: { size: 1 } }],
           (err, result) => {
-            res.send(result[0].URL);
+            res.render('index', { result: result[0].URL });
           }
         );
     })
