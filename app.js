@@ -13,11 +13,17 @@ MongoClient.connect('mongodb://localhost:27017/moma', (err, db) => {
         .aggregate(
           [{ $match: { URL: { $ne: null } } }, { $sample: { size: 1 } }],
           (err, result) => {
-            axios.get(result[0].URL).then(response => {
-              let src =
+            let src;
+            const title = result[0]['Title'];
+            const artist = result[0]['Artist'].toString();
+            const date = result[0]['Date'];
+            const medium = result[0]['Medium'];
+            const url = result[0]['URL'];
+            axios.get(url).then(response => {
+              src =
                 'http://moma.org' +
                 $('img.picture__img--work', response.data).attr('src');
-              res.render('index', { src });
+              res.render('index', { title, artist, date, medium, src });
             });
           }
         );
