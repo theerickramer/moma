@@ -19,11 +19,12 @@ MongoClient.connect('mongodb://localhost:27017/moma', (err, db) => {
             const date = result[0]['Date'];
             const medium = result[0]['Medium'];
             const url = result[0]['URL'];
+            const thumb = result[0]['ThumbnailURL'];
             axios.get(url).then(response => {
               src =
                 'http://moma.org' +
                 $('img.picture__img--work', response.data).attr('src');
-              res.render('index', { title, artist, date, medium, src });
+              res.render('index', { title, artist, date, medium, src, thumb });
             });
           }
         );

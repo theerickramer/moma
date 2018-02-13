@@ -7,15 +7,28 @@
   <title>MOMA Random Artwork</title>
 </head>
 <style>
-  img {
+  img,
+  #image-container {
     width: 100%;
   }
 </style>
 <body>
-  <img src="<%= src %>">
+  <div id="image-container">
+    <img id="thumb" src="<%= thumb %>">
+  </div>
   <h4><%= artist %></h4>
   <p><%= title %></p>
   <p><%= date %></p>
   <p><%= medium %></p>
 </body>
+<script>
+  const img = document.createElement('img');
+  img.src = '<%= src %>';
+  img.onload = () => {
+    const thumb = document.getElementById('thumb');
+    const container = document.getElementById('image-container')
+    container.removeChild(thumb)
+    container.appendChild(img);
+  }
+</script>
 </html>
