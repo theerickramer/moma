@@ -3,16 +3,17 @@ const axios = require('axios');
 const $ = require('cheerio');
 const MongoClient = require('mongodb').MongoClient;
 let mongo;
-app.set('view engine', 'ejs');
 
 getImage = () => {
   if (mongo) {
-    console.log('mongo');
     return new Promise((resolve, reject) => {
       mongo.then(db => db.collection('Artworks')).then(collection => {
         let image;
         collection.aggregate(
-          [{ $match: { URL: { $ne: null } } }, { $sample: { size: 1 } }],
+          [
+            { $match: { URL: { $ne: null }, ThumbnailURL: { $exists: true, $ne: null } } },
+            { $sample: { size: 1 } }
+          ],
           (err, result) => {
             if (err) reject(new Error('Something went wrong'));
             let src;
@@ -34,7 +35,6 @@ getImage = () => {
       });
     });
   } else {
-    console.log('no mongo');
     mongo = MongoClient.connect('mongodb://localhost:27017/moma').catch(err =>
       console.error(err)
     );
@@ -43,12 +43,13 @@ getImage = () => {
 };
 
 app
+  .set('view engine', 'ejs')
   .get('/', async (req, res) => {
     try {
       const { title, artist, date, medium, src, thumb } = await getImage();
       res.render('index', { title, artist, date, medium, src, thumb });
     } catch (error) {
-      res.render('index', { title: error })
+      res.render('index', { title: error });
     }
   })
   .listen(3000, () => {
