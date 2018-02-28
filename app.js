@@ -15,7 +15,7 @@ getImage = () => {
             { $sample: { size: 1 } }
           ],
           (err, result) => {
-            if (err) reject(new Error('Something went wrong'));
+            if (err) reject(new Error(err));
             let src;
             const title = result[0]['Title'];
             const artist = result[0]['Artist'].toString();
@@ -38,7 +38,7 @@ getImage = () => {
     mongo = MongoClient.connect('mongodb://localhost:27017/moma').catch(err =>
       console.error(err)
     );
-    getImage();
+    return getImage();
   }
 };
 
@@ -49,7 +49,7 @@ app
       const { title, artist, date, medium, src, thumb } = await getImage();
       res.render('index', { title, artist, date, medium, src, thumb });
     } catch (error) {
-      res.render('index', { title: error });
+      res.send(`Something's wrong...`);
     }
   })
   .listen(3000, () => {
