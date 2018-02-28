@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,28 +8,56 @@
   <title>MOMA Random Artwork</title>
 </head>
 <style>
+  body,
   img,
-  #image-container {
+  #image {
+    position: relative;
+    margin: 0;
     width: 100%;
   }
+
+  .info {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 25px 50px;
+    background: linear-gradient(to bottom, transparent, #000000);
+    color: #ffffff;
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    z-index: 1;
+  }
 </style>
+
 <body>
-  <div id="image-container">
+  <div id="image">
     <img id="thumb" src="<%= thumb %>">
   </div>
-  <h4><%= artist %></h4>
-  <p><%= title %></p>
-  <p><%= date %></p>
-  <p><%= medium %></p>
+  <div class="info">
+    <h4>
+      <%= artist %>
+    </h4>
+    <p>
+      <%= title %>
+    </p>
+    <p>
+      <%= date %>
+    </p>
+    <p>
+      <%= medium %>
+    </p>
+  </div>
 </body>
 <script>
-  const img = document.createElement('img');
-  img.src = '<%= src %>';
-  img.onload = () => {
-    const thumb = document.getElementById('thumb');
-    const container = document.getElementById('image-container')
-    container.removeChild(thumb)
-    container.appendChild(img);
+  const image = document.getElementById('image')
+  const imageHiRes = document.createElement('img');
+  const thumb = document.getElementById('thumb');
+
+  imageHiRes.src = '<%= src %>';
+  imageHiRes.onload = () => {
+    image.removeChild(thumb)
+    image.appendChild(imageHiRes);
   }
 </script>
+
 </html>
