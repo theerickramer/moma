@@ -11,14 +11,22 @@ getImage = () => {
         let image;
         collection.aggregate(
           [
-            { $match: { URL: { $ne: null }, ThumbnailURL: { $exists: true, $ne: null } } },
+            {
+              $match: {
+                URL: { $ne: null },
+                ThumbnailURL: { $exists: true, $ne: null }
+              }
+            },
             { $sample: { size: 1 } }
           ],
           (err, result) => {
             if (err) reject(new Error(err));
             let src;
             const title = result[0]['Title'];
-            const artist = result[0]['Artist'].toString();
+            const artist =
+              result[0]['Artist'].length > 1
+                ? result[0]['Artist'].join(', ')
+                : result[0]['Artist'];
             const date = result[0]['Date'];
             const medium = result[0]['Medium'];
             const url = result[0]['URL'];
