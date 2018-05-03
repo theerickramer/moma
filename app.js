@@ -60,6 +60,6 @@ app
       res.send(`Something's wrong...`);
     }
   })
-  .listen(3000, () => {
+  .listen(process.env.PORT || 3000, () => {
     console.log(`app listening on localhost:3000`);
   });
