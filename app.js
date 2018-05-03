@@ -43,7 +43,7 @@ getImage = () => {
       });
     });
   } else {
-    mongo = MongoClient.connect('mongodb://localhost:27017/moma').catch(err =>
+    mongo = MongoClient.connect(process.env.MONGOLAB_URI).catch(err =>
       console.error(err)
     );
     return getImage();
