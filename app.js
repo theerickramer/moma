@@ -34,7 +34,6 @@ getImage = () => {
               const url = result[0]['URL'];
               const thumb = result[0]['ThumbnailURL'];
               axios.get(url).then(response => {
-                console.log(response);
                 src =
                   'https://moma.org' +
                   $('img.picture__img--focusable', response.data).attr('src');
