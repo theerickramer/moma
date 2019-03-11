@@ -23,6 +23,7 @@ getImage = () => {
             ],
             (err, result) => {
               if (err) reject(new Error(err));
+              console.log('mongo queried');
               let src;
               const title = result[0]['Title'];
               const artist =
@@ -34,6 +35,7 @@ getImage = () => {
               const url = result[0]['URL'];
               const thumb = result[0]['ThumbnailURL'];
               axios.get(url).then(response => {
+                console.log('moma scraped')
                 src =
                   'https://moma.org' +
                   $('img.picture__img--focusable', response.data).attr('src');
@@ -48,6 +50,7 @@ getImage = () => {
     mongo = MongoClient.connect(process.env.MONGODB_URI).catch(err =>
       console.error(err)
     );
+    console.log('mongo connected')
     return getImage();
   }
 };
