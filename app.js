@@ -4,6 +4,13 @@ const $ = require('cheerio');
 const MongoClient = require('mongodb').MongoClient;
 let mongo;
 
+connectMongo = () => {
+  mongo = MongoClient.connect(process.env.MONGODB_URI).catch(err =>
+    console.error(err)
+  );
+  console.log('mongo connected')
+}
+
 getImage = () => {
   if (mongo) {
     return new Promise((resolve, reject) => {
@@ -47,13 +54,12 @@ getImage = () => {
         });
     });
   } else {
-    mongo = MongoClient.connect(process.env.MONGODB_URI).catch(err =>
-      console.error(err)
-    );
-    console.log('mongo connected')
+    connectMongo();
     return getImage();
   }
 };
+
+connectMongo();
 
 app
   .set('view engine', 'ejs')
