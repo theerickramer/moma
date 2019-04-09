@@ -1,4 +1,5 @@
-const app = require('express')();
+const express = require('express');
+const app = express();
 const axios = require('axios');
 const $ = require('cheerio');
 const MongoClient = require('mongodb').MongoClient;
@@ -71,6 +72,7 @@ connectMongo();
 
 app
   .set('view engine', 'ejs')
+  .use(express.static('public'))
   .get('/', getImage, getHiRes, sendImage)
   .listen(process.env.PORT || 3000, () => {
     console.log(`app listening on localhost:3000`);
