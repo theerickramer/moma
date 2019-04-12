@@ -18,7 +18,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "build": "webpack --entry ./src/index.js --output-path ./public --output-filename index.js --watch"
+    "build": "webpack --entry ./src/index.js --output-path ./public --output-filename index.js",
+    "watch": "webpack --entry ./src/index.js --output-path ./public --output-filename index.js --watch"
   },
   "devDependencies": {
     "css-loader": "^2.1.1",
