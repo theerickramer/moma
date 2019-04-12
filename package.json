@@ -3,18 +3,29 @@
   "version": "1.0.0",
   "main": "app.js",
   "license": "MIT",
-	"engines": {
-		"node": "9.5.0"
-	},
+  "engines": {
+    "node": "10.6.0"
+  },
   "dependencies": {
     "axios": "^0.17.1",
+    "body-parser": "^1.18.3",
     "cheerio": "^1.0.0-rc.2",
     "ejs": "^2.5.7",
     "express": "^4.16.2",
-    "mongodb": "^2.2.33"
+    "mongodb": "^2.2.33",
+    "vue": "^2.6.10"
   },
   "scripts": {
     "start": "node app.js",
-		"dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "build": "webpack --entry ./src/index.js --output-path ./public --output-filename index.js --watch"
+  },
+  "devDependencies": {
+    "css-loader": "^2.1.1",
+    "vue-loader": "^15.7.0",
+    "vue-style-loader": "^4.1.2",
+    "vue-template-compiler": "^2.6.10",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.3.0"
   }
 }
