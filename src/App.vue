@@ -1,27 +1,39 @@
 <template>
-  <div> 
+  <div>
     <div id="image">
-      <img id="thumb" v-bind:src="src">
+      <img v-bind:src="src">
     </div>
-    <div class="info">
-      <h2>{{ artist }}</h2>
-      <h3>{{ title }}</h3>
-      <p>{{ date }}</p>
-      <p>{{ medium }}</p>
-      <div id="refresh"></div>
-    </div>
+    <a v-bind:href="url">
+      <div class="info">
+        <h2>{{ artist }}</h2>
+        <h3>{{ title }}</h3>
+        <p>{{ date }}</p>
+        <p>{{ medium }}</p>
+        <div id="refresh" @click="reload"></div>
+      </div>
+    </a>
   </div>
 </template>
 
 <script>
 import axios from "axios";
-import $ from "cheerio";
 
 const data = window.data;
 
 export default {
-  data () {
-    return data
+  data() {
+    return data;
+  },
+  computed: {
+    imgSrc: () => this.src
+  },
+  mounted: function() {
+    axios.post("/gethi", { url: this.url }).then(response => {
+      this.src = response.data.asset;
+    });
+  },
+  methods: {
+    reload: () => window.location.reload()
   }
 };
 </script>

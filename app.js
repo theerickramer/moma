@@ -1,6 +1,7 @@
+const axios = require('axios');
+const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
-const axios = require('axios');
 const $ = require('cheerio');
 const MongoClient = require('mongodb').MongoClient;
 let mongo;
@@ -48,24 +49,26 @@ getImage = (req, res, next) => {
   }
 };
 
-getHiRes = (req, res, next) => {
-  axios.get(res.locals.image.url).then(response => {
-    console.log('moma scraped');
-    res.locals.image.src =
-      'https://moma.org' +
-      $('img.picture__img--focusable', response.data).attr('src');
-    next();
-  });
-};
-
 sendImage = (req, res, next) => {
   try {
-    const { title, artist, date, medium, src, thumb } = res.locals.image;
-    res.render('index', { title, artist, date, medium, src, thumb });
+    const { title, artist, date, medium, thumb, url } = res.locals.image;
+    res.render('index', { title, artist, date, medium, thumb, url });
   } catch (error) {
     res.send(`Something's wrong...`);
   }
-  next()
+  next();
+};
+
+getHiRes = url => {
+  return new Promise((resolve, reject) => {
+    return axios.get(url).then(response => {
+      console.log('moma scraped');
+      asset =
+        'https://moma.org' +
+        $('img.picture__img--focusable', response.data).attr('src');
+      resolve(asset);
+    });
+  });
 };
 
 connectMongo();
@@ -73,7 +76,12 @@ connectMongo();
 app
   .set('view engine', 'ejs')
   .use(express.static('public'))
-  .get('/', getImage, getHiRes, sendImage)
+  .use(bodyParser.json())
+  .get('/', getImage, sendImage)
+  .post('/gethi', async (req, res) => {
+    const asset = await getHiRes(req.body.url);
+    res.json({ asset });
+  })
   .listen(process.env.PORT || 3000, () => {
     console.log(`app listening on localhost:3000`);
   });

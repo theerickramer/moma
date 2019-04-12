@@ -12,26 +12,13 @@
   <script>
     const data = {
       artist: '<%= artist %>',
-      title: '<%= title %>',
       date: '<%= date %>',
       medium: '<%= medium %>',
-      src: '<%= src %>'
+      src: '<%= thumb %>',
+      title: '<%= title %>',
+      url: '<%= url %>'
     };
     window.data = data;
   </script>
   <script src="index.js"></script>
-  <!-- <script>
-    const image = document.getElementById('image');
-    const imageHiRes = document.createElement('img');
-    const thumb = document.getElementById('thumb');
-
-    imageHiRes.src = '<%= src %>';
-    imageHiRes.onload = () => {
-      image.removeChild(thumb);
-      image.appendChild(imageHiRes);
-    };
-
-    const refresh = document.getElementById('refresh');
-    refresh.addEventListener('click', () => window.location.reload());
-  </script> -->
 </html>
