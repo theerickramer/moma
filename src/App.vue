@@ -29,7 +29,17 @@ export default {
   },
   mounted: function() {
     axios.post("/gethi", { url: this.url }).then(response => {
-      this.src = response.data.asset;
+      console.log(response.data.jobId);
+      const ws = new WebSocket("ws://localhost:3000/socket");
+
+      ws.onopen = function open() {
+        ws.send(response.data.jobId);
+      };
+
+      ws.onmessage = function incoming(data) {
+        console.log(data);
+        this.src = data.asset;
+      };
     });
   },
   methods: {

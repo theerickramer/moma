@@ -1,8 +1,14 @@
+const $ = require('cheerio');
 const axios = require('axios');
 const bodyParser = require('body-parser');
+const Queue = require('bull');
+const Websocket = require('ws');
 const express = require('express');
 const app = express();
-const $ = require('cheerio');
+const http = require('http');
+const server = http.createServer(app);
+const WebSocketServer = require('ws').Server;
+const wss = new WebSocketServer({ server, path: '/socket' });
 const MongoClient = require('mongodb').MongoClient;
 let mongo;
 
@@ -12,6 +18,8 @@ connectMongo = () => {
   );
   console.log('mongo connected');
 };
+
+connectMongo();
 
 getImage = (req, res, next) => {
   if (mongo) {
@@ -71,7 +79,25 @@ getHiRes = url => {
   });
 };
 
-connectMongo();
+const getHiResQueue = new Queue('getHiRes', 'redis://127.0.0.1:6379');
+const hiResQueue = new Queue('hiRes', 'redis://127.0.0.1:6379');
+
+getHiResQueue.process(job => {
+  return getHiRes(job.data.url);
+});
+
+hiResQueue.process((job, done) => {
+  done(job.data.result);
+});
+
+hiResQueue.on('completed', function(job, result) {
+  console.log(`COMPLETED: ${job.id} RESULT: ${result}`);
+});
+
+getHiResQueue.on('completed', function(job, result) {
+  console.log(`COMPLETED: ${result}`);
+  hiResQueue.add({ jobId: job.id, result });
+});
 
 app
   .set('view engine', 'ejs')
@@ -79,9 +105,33 @@ app
   .use(bodyParser.json())
   .get('/', getImage, sendImage)
   .post('/gethi', async (req, res) => {
-    const asset = await getHiRes(req.body.url);
-    res.json({ asset });
-  })
-  .listen(process.env.PORT || 3000, () => {
-    console.log(`app listening on localhost:3000`);
+    const job = await getHiResQueue.add({ url: req.body.url });
+    res.json({ jobId: job.id });
   });
+
+server.listen(process.env.PORT || 3000, () => {
+  console.log(`app listening on localhost:3000`);
+});
+
+wss.on('connection', ws => {
+  const findJobResult = async id => {
+    const jobs = await hiResQueue.getJobs();
+    return jobs.forEach(job => {
+      if (job.data.jobId === id) {
+        console.log(`findJobResult: ${job.data}`);
+        return job.data;
+      }
+    });
+  };
+
+  ws.on('message', async jobId => {
+    const interval = setInterval(async () => {
+      const result = await findJobResult(jobId);
+      if (result) {
+        console.log('result: ' + result);
+        // ws.send(result);
+        clearInterval(interval);
+      }
+    }, 100);
+  });
+});
