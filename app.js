@@ -14,12 +14,11 @@ const MongoClient = require('mongodb').MongoClient;
 const wss = new WebSocketServer({ server, path: '/socket' });
 
 wss.on('connection', ws => {
-  ws.on('message', async jobId => {
+  ws.on('message', jobId => {
     const interval = setInterval(async () => {
-      const result = await getHiResQueue.getJob(jobId).finished();
-      if (result) {
-        console.log('result: ' + result);
-        ws.send(result);
+      const { returnvalue } = await getHiResQueue.getJob(jobId);
+      if (returnvalue) {
+        ws.send(returnvalue);
         clearInterval(interval);
       }
     }, 100);
@@ -104,23 +103,9 @@ getHiRes = url => {
 
 // JOB QUEUE
 const getHiResQueue = new Queue('getHiRes', 'redis://127.0.0.1:6379');
-const hiResQueue = new Queue('hiRes', 'redis://127.0.0.1:6379');
 
 getHiResQueue.process(job => {
   return getHiRes(job.data.URL);
-});
-
-hiResQueue.process((job, done) => {
-  done(job.data.result);
-});
-
-hiResQueue.on('completed', function(job, result) {
-  console.log(`COMPLETED: ${job.id} RESULT: ${result}`);
-});
-
-getHiResQueue.on('completed', function(job, result) {
-  console.log(`COMPLETED: ${result}`);
-  hiResQueue.add({ jobId: job.id, result });
 });
 
 // SERVER

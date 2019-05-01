@@ -29,14 +29,12 @@ export default {
   },
   mounted: function() {
     const ws = new WebSocket("ws://localhost:3000/socket");
-
-    ws.onopen = function open() {
+    ws.onopen = () => {
       ws.send(this.jobId);
     };
 
-    ws.onmessage = function incoming(data) {
-      console.log(data);
-      this.src = data.asset;
+    ws.onmessage = response => {
+      this.src = response.data
     };
   },
   methods: {
