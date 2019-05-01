@@ -16,8 +16,6 @@
 </template>
 
 <script>
-import axios from "axios";
-
 const data = window.data;
 
 export default {
@@ -28,7 +26,8 @@ export default {
     imgSrc: () => this.src
   },
   mounted: function() {
-    const ws = new WebSocket("ws://localhost:3000/socket");
+    const HOST = location.origin.replace(/^http/, 'ws')
+    const ws = new WebSocket(`${HOST}/socket`);
     ws.onopen = () => {
       ws.send(this.jobId);
     };

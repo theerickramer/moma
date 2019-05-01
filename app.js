@@ -15,13 +15,21 @@ const wss = new WebSocketServer({ server, path: '/socket' });
 
 wss.on('connection', ws => {
   ws.on('message', jobId => {
+    let tries = 0;
     const interval = setInterval(async () => {
       const { returnvalue } = await getHiResQueue.getJob(jobId);
+      if (tries % 10 === 0) {
+        ws.ping('still trying...');
+      }
+
       if (returnvalue) {
         ws.send(returnvalue);
+        ws.terminate();
         clearInterval(interval);
+      } else {
+        tries++
       }
-    }, 100);
+    }, 250);
   });
 });
 
@@ -102,7 +110,7 @@ getHiRes = url => {
 };
 
 // JOB QUEUE
-const getHiResQueue = new Queue('getHiRes', 'redis://127.0.0.1:6379');
+const getHiResQueue = new Queue('getHiRes', process.env.REDIS_URL);
 
 getHiResQueue.process(job => {
   return getHiRes(job.data.URL);
