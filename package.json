@@ -9,11 +9,13 @@
   "dependencies": {
     "axios": "^0.17.1",
     "body-parser": "^1.18.3",
+    "bull": "^3.8.1",
     "cheerio": "^1.0.0-rc.2",
     "ejs": "^2.5.7",
     "express": "^4.16.2",
     "mongodb": "^2.2.33",
-    "vue": "^2.6.10"
+    "vue": "^2.6.10",
+    "ws": "^7.0.0"
   },
   "scripts": {
     "start": "node app.js",

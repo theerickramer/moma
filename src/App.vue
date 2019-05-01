@@ -16,8 +16,6 @@
 </template>
 
 <script>
-import axios from "axios";
-
 const data = window.data;
 
 export default {
@@ -28,9 +26,15 @@ export default {
     imgSrc: () => this.src
   },
   mounted: function() {
-    axios.post("/gethi", { url: this.url }).then(response => {
-      this.src = response.data.asset;
-    });
+    const HOST = location.origin.replace(/^http/, 'ws')
+    const ws = new WebSocket(`${HOST}/socket`);
+    ws.onopen = () => {
+      ws.send(this.jobId);
+    };
+
+    ws.onmessage = response => {
+      this.src = response.data
+    };
   },
   methods: {
     reload: () => window.location.reload()
