@@ -8,10 +8,26 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const WebSocketServer = require('ws').Server;
-const wss = new WebSocketServer({ server, path: '/socket' });
 const MongoClient = require('mongodb').MongoClient;
-let mongo;
 
+// WEB SOCKET
+const wss = new WebSocketServer({ server, path: '/socket' });
+
+wss.on('connection', ws => {
+  ws.on('message', async jobId => {
+    const interval = setInterval(async () => {
+      const result = await getHiResQueue.getJob(jobId).finished();
+      if (result) {
+        console.log('result: ' + result);
+        ws.send(result);
+        clearInterval(interval);
+      }
+    }, 100);
+  });
+});
+
+// MONGO
+let mongo;
 connectMongo = () => {
   mongo = MongoClient.connect(process.env.MONGODB_URI).catch(err =>
     console.error(err)
@@ -21,6 +37,7 @@ connectMongo = () => {
 
 connectMongo();
 
+// FUNCTIONS
 getImage = (req, res, next) => {
   if (mongo) {
     mongo
@@ -37,19 +54,26 @@ getImage = (req, res, next) => {
             },
             { $sample: { size: 1 } }
           ],
-          (err, result) => {
+          async (err, result) => {
             if (err) reject(new Error(err));
             console.log('mongo queried');
-            const title = result[0]['Title'];
-            const artist =
+            const { Title, Date, Medium, ThumbnailURL, URL } = result[0];
+            const Artist =
               result[0]['Artist'].length > 1
                 ? result[0]['Artist'].join(', ')
                 : result[0]['Artist'];
-            const date = result[0]['Date'];
-            const medium = result[0]['Medium'];
-            const url = result[0]['URL'];
-            const thumb = result[0]['ThumbnailURL'];
-            res.locals.image = { title, artist, date, medium, url, thumb };
+            const job = await getHiResQueue.add({ URL });
+
+            res.locals.image = {
+              Title,
+              Artist,
+              Date,
+              Medium,
+              ThumbnailURL,
+              URL,
+              jobId: job.id
+            };
+
             next();
           }
         );
@@ -59,8 +83,7 @@ getImage = (req, res, next) => {
 
 sendImage = (req, res, next) => {
   try {
-    const { title, artist, date, medium, thumb, url } = res.locals.image;
-    res.render('index', { title, artist, date, medium, thumb, url });
+    res.render('index', { ...res.locals.image });
   } catch (error) {
     res.send(`Something's wrong...`);
   }
@@ -79,11 +102,12 @@ getHiRes = url => {
   });
 };
 
+// JOB QUEUE
 const getHiResQueue = new Queue('getHiRes', 'redis://127.0.0.1:6379');
 const hiResQueue = new Queue('hiRes', 'redis://127.0.0.1:6379');
 
 getHiResQueue.process(job => {
-  return getHiRes(job.data.url);
+  return getHiRes(job.data.URL);
 });
 
 hiResQueue.process((job, done) => {
@@ -99,39 +123,13 @@ getHiResQueue.on('completed', function(job, result) {
   hiResQueue.add({ jobId: job.id, result });
 });
 
+// SERVER
 app
   .set('view engine', 'ejs')
   .use(express.static('public'))
   .use(bodyParser.json())
-  .get('/', getImage, sendImage)
-  .post('/gethi', async (req, res) => {
-    const job = await getHiResQueue.add({ url: req.body.url });
-    res.json({ jobId: job.id });
-  });
+  .get('/', getImage, sendImage);
 
 server.listen(process.env.PORT || 3000, () => {
   console.log(`app listening on localhost:3000`);
-});
-
-wss.on('connection', ws => {
-  const findJobResult = async id => {
-    const jobs = await hiResQueue.getJobs();
-    return jobs.forEach(job => {
-      if (job.data.jobId === id) {
-        console.log(`findJobResult: ${job.data}`);
-        return job.data;
-      }
-    });
-  };
-
-  ws.on('message', async jobId => {
-    const interval = setInterval(async () => {
-      const result = await findJobResult(jobId);
-      if (result) {
-        console.log('result: ' + result);
-        // ws.send(result);
-        clearInterval(interval);
-      }
-    }, 100);
-  });
 });

@@ -28,19 +28,16 @@ export default {
     imgSrc: () => this.src
   },
   mounted: function() {
-    axios.post("/gethi", { url: this.url }).then(response => {
-      console.log(response.data.jobId);
-      const ws = new WebSocket("ws://localhost:3000/socket");
+    const ws = new WebSocket("ws://localhost:3000/socket");
 
-      ws.onopen = function open() {
-        ws.send(response.data.jobId);
-      };
+    ws.onopen = function open() {
+      ws.send(this.jobId);
+    };
 
-      ws.onmessage = function incoming(data) {
-        console.log(data);
-        this.src = data.asset;
-      };
-    });
+    ws.onmessage = function incoming(data) {
+      console.log(data);
+      this.src = data.asset;
+    };
   },
   methods: {
     reload: () => window.location.reload()
