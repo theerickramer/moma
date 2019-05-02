@@ -18,7 +18,7 @@ wss.on('connection', ws => {
     let tries = 0;
     const interval = setInterval(async () => {
       const { returnvalue } = await getHiResQueue.getJob(jobId);
-      if (tries % 10 === 0) {
+      if (tries % 100 === 0) {
         ws.ping('still trying...');
       }
 
