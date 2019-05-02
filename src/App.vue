@@ -29,7 +29,11 @@ export default {
     const HOST = location.origin.replace(/^http/, 'ws')
     const ws = new WebSocket(`${HOST}/socket`);
     ws.onopen = () => {
-      ws.send(this.jobId);
+      const message = {
+        request: 'hiRes',
+        jobId: this.jobId
+      }
+      ws.send(JSON.stringify(message));
     };
 
     ws.onmessage = response => {

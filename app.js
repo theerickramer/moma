@@ -10,26 +10,57 @@ const server = http.createServer(app);
 const WebSocketServer = require('ws').Server;
 const MongoClient = require('mongodb').MongoClient;
 
+// JOB QUEUES
+const getHiResQueue = new Queue('getHiRes', process.env.REDIS_URL);
+
+getHiResQueue.process(job => {
+  return getHiRes(job.data.URL);
+});
+
+const getImageDataQueue = new Queue('getImageData', process.env.REDIS_URL);
+
+getImageDataQueue.process(job => {
+  // return getHiRes(job.data.URL);
+});
+
 // WEB SOCKET
 const wss = new WebSocketServer({ server, path: '/socket' });
 
-wss.on('connection', ws => {
-  ws.on('message', jobId => {
+const createQueuePoll = (queue, jobId, socket) => {
+  return () => {
     let tries = 0;
     const interval = setInterval(async () => {
-      const { returnvalue } = await getHiResQueue.getJob(jobId);
+      const { returnvalue } = await queue.getJob(jobId);
       if (tries % 100 === 0) {
-        ws.ping('still trying...');
+        socket.ping('still trying...');
       }
-
+      console.log(returnvalue);
       if (returnvalue) {
-        ws.send(returnvalue);
-        ws.terminate();
+        socket.send(returnvalue);
+        socket.terminate();
         clearInterval(interval);
       } else {
-        tries++
+        tries++;
       }
     }, 250);
+  };
+};
+
+wss.on('connection', ws => {
+  ws.on('message', messageJson => {
+    const message = JSON.parse(messageJson);
+
+    if (message.request === 'imageData') {
+      const imageDataPoll = createQueuePoll(
+        getImageDataQueue,
+        message.jobId,
+        ws
+      );
+      imageDataPoll();
+    } else if (message.request === 'hiRes') {
+      const hiResPoll = createQueuePoll(getHiResQueue, message.jobId, ws);
+      hiResPoll();
+    }
   });
 });
 
@@ -108,13 +139,6 @@ getHiRes = url => {
     });
   });
 };
-
-// JOB QUEUE
-const getHiResQueue = new Queue('getHiRes', process.env.REDIS_URL);
-
-getHiResQueue.process(job => {
-  return getHiRes(job.data.URL);
-});
 
 // SERVER
 app
