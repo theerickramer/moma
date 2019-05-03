@@ -23,13 +23,21 @@ const getHiResQueue = new Queue('getHiRes', process.env.REDIS_URL);
 getImageDataQueue.process(() => getImage());
 getImageDataQueue.on('completed', (job, result) => {
   const { url } = JSON.parse(result);
+  const message = {
+    type: 'imageData',
+    result
+  };
   getHiResQueue.add({ url });
-  redisPublisher.publish('jobCompletion', result);
+  redisPublisher.publish('jobCompletion', JSON.stringify(message));
 });
 
 getHiResQueue.process(job => getHiRes(job.data.url));
 getHiResQueue.on('completed', (job, result) => {
-  redisPublisher.publish('jobCompletion', result);
+  const message = {
+    type: 'hiRes',
+    result
+  };
+  redisPublisher.publish('jobCompletion', JSON.stringify(message));
 });
 
 // WEB SOCKET
@@ -46,8 +54,6 @@ const createQueuePoll = (queue, jobId, socket) => {
       console.log(returnvalue);
       if (returnvalue) {
         socket.send(returnvalue);
-        socket.terminate();
-        clearInterval(interval);
       } else {
         tries++;
       }
@@ -59,21 +65,14 @@ wss.on('connection', async ws => {
   const job = await getImageDataQueue.add();
 
   redisSubscriber.on('message', (channel, message) => {
-    ws.send(message);
-  });
-  // ws.on('message', async messageJson => {
-  //   const message = JSON.parse(messageJson);
-  //     console.log(message)
+    const parsed = JSON.parse(message);
+    ws.send(parsed.result);
 
-  //   if (message.request === 'imageData') {
-  //     const job = await getImageDataQueue.add();
-  //     const imageDataPoll = createQueuePoll(getImageDataQueue, job.id, ws);
-  //     imageDataPoll();
-  //   } else if (message.request === 'hiRes') {
-  //     const hiResPoll = createQueuePoll(getHiResQueue, message.jobId, ws);
-  //     hiResPoll();
-  //   }
-  // });
+    if (parsed.type === 'hiRes') {
+      ws.terminate();
+      // clearInterval(interval);
+    }
+  });
 });
 
 // MONGO

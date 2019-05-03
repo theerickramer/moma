@@ -34,6 +34,7 @@ export default {
       const { ...data } = JSON.parse(response.data);
       Object.assign(this, data)
     };
+    ws.onclose = () => console.log('closed')
   },
   methods: {
     reload: () => window.location.reload()
