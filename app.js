@@ -9,14 +9,28 @@ const http = require('http');
 const server = http.createServer(app);
 const WebSocketServer = require('ws').Server;
 const MongoClient = require('mongodb').MongoClient;
+const redis = require('redis');
+
+// REDIS
+const redisSubscriber = redis.createClient();
+const redisPublisher = redis.createClient();
+redisSubscriber.subscribe('jobCompletion');
 
 // JOB QUEUES
 const getImageDataQueue = new Queue('getImageData', process.env.REDIS_URL);
 const getHiResQueue = new Queue('getHiRes', process.env.REDIS_URL);
 
 getImageDataQueue.process(() => getImage());
+getImageDataQueue.on('completed', (job, result) => {
+  const { url } = JSON.parse(result);
+  getHiResQueue.add({ url });
+  redisPublisher.publish('jobCompletion', result);
+});
 
 getHiResQueue.process(job => getHiRes(job.data.url));
+getHiResQueue.on('completed', (job, result) => {
+  redisPublisher.publish('jobCompletion', result);
+});
 
 // WEB SOCKET
 const wss = new WebSocketServer({ server, path: '/socket' });
@@ -41,20 +55,25 @@ const createQueuePoll = (queue, jobId, socket) => {
   };
 };
 
-wss.on('connection', ws => {
-  ws.on('message', async messageJson => {
-    const message = JSON.parse(messageJson);
-      console.log(message)
+wss.on('connection', async ws => {
+  const job = await getImageDataQueue.add();
 
-    if (message.request === 'imageData') {
-      const job = await getImageDataQueue.add();
-      const imageDataPoll = createQueuePoll(getImageDataQueue, job.id, ws);
-      imageDataPoll();
-    } else if (message.request === 'hiRes') {
-      const hiResPoll = createQueuePoll(getHiResQueue, message.jobId, ws);
-      hiResPoll();
-    }
+  redisSubscriber.on('message', (channel, message) => {
+    ws.send(message);
   });
+  // ws.on('message', async messageJson => {
+  //   const message = JSON.parse(messageJson);
+  //     console.log(message)
+
+  //   if (message.request === 'imageData') {
+  //     const job = await getImageDataQueue.add();
+  //     const imageDataPoll = createQueuePoll(getImageDataQueue, job.id, ws);
+  //     imageDataPoll();
+  //   } else if (message.request === 'hiRes') {
+  //     const hiResPoll = createQueuePoll(getHiResQueue, message.jobId, ws);
+  //     hiResPoll();
+  //   }
+  // });
 });
 
 // MONGO
@@ -99,8 +118,7 @@ getImage = () => {
               const artist =
                 result[0]['Artist'].length > 1
                   ? result[0]['Artist'].join(', ')
-                  : result[0]['Artist'];
-              const job = await getHiResQueue.add({ url });
+                  : result[0]['Artist'][0];
 
               const imageData = {
                 title,
@@ -108,8 +126,7 @@ getImage = () => {
                 date,
                 medium,
                 src,
-                url,
-                jobId: job.id
+                url
               };
 
               resolve(JSON.stringify(imageData));
@@ -127,7 +144,7 @@ getHiRes = url => {
       asset =
         'https://moma.org' +
         $('img.picture__img--focusable', response.data).attr('src');
-      resolve(asset);
+      resolve(JSON.stringify({ src: asset }));
     });
   });
 };

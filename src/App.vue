@@ -30,22 +30,8 @@ export default {
   mounted: function() {
     const HOST = location.origin.replace(/^http/, 'ws')
     const ws = new WebSocket(`${HOST}/socket`);
-    ws.onopen = () => {
-      const message = {
-        request: 'imageData'
-      };
-      ws.send(JSON.stringify(message));
-    };
-
     ws.onmessage = response => {
-      const { jobId, ...data } = JSON.parse(response.data);
-      if (jobId) {
-        const reply = {
-          request: 'hiRes',
-          jobId
-        };
-        ws.send(JSON.stringify(reply))
-      }
+      const { ...data } = JSON.parse(response.data);
       Object.assign(this, data)
     };
   },
