@@ -11,17 +11,12 @@ const WebSocketServer = require('ws').Server;
 const MongoClient = require('mongodb').MongoClient;
 
 // JOB QUEUES
+const getImageDataQueue = new Queue('getImageData', process.env.REDIS_URL);
 const getHiResQueue = new Queue('getHiRes', process.env.REDIS_URL);
 
-getHiResQueue.process(job => {
-  return getHiRes(job.data.URL);
-});
+getImageDataQueue.process(() => getImage());
 
-const getImageDataQueue = new Queue('getImageData', process.env.REDIS_URL);
-
-getImageDataQueue.process(job => {
-  // return getHiRes(job.data.URL);
-});
+getHiResQueue.process(job => getHiRes(job.data.url));
 
 // WEB SOCKET
 const wss = new WebSocketServer({ server, path: '/socket' });
@@ -47,15 +42,13 @@ const createQueuePoll = (queue, jobId, socket) => {
 };
 
 wss.on('connection', ws => {
-  ws.on('message', messageJson => {
+  ws.on('message', async messageJson => {
     const message = JSON.parse(messageJson);
+      console.log(message)
 
     if (message.request === 'imageData') {
-      const imageDataPoll = createQueuePoll(
-        getImageDataQueue,
-        message.jobId,
-        ws
-      );
+      const job = await getImageDataQueue.add();
+      const imageDataPoll = createQueuePoll(getImageDataQueue, job.id, ws);
       imageDataPoll();
     } else if (message.request === 'hiRes') {
       const hiResPoll = createQueuePoll(getHiResQueue, message.jobId, ws);
@@ -76,56 +69,55 @@ connectMongo = () => {
 connectMongo();
 
 // FUNCTIONS
-getImage = (req, res, next) => {
-  if (mongo) {
-    mongo
-      .then(db => db.collection('Artworks'))
-      .then(collection => {
-        let image;
-        collection.aggregate(
-          [
-            {
-              $match: {
-                URL: { $ne: null },
-                ThumbnailURL: { $exists: true, $ne: null }
-              }
-            },
-            { $sample: { size: 1 } }
-          ],
-          async (err, result) => {
-            if (err) reject(new Error(err));
-            console.log('mongo queried');
-            const { Title, Date, Medium, ThumbnailURL, URL } = result[0];
-            const Artist =
-              result[0]['Artist'].length > 1
-                ? result[0]['Artist'].join(', ')
-                : result[0]['Artist'];
-            const job = await getHiResQueue.add({ URL });
+getImage = () => {
+  return new Promise((resolve, reject) => {
+    if (mongo) {
+      mongo
+        .then(db => db.collection('Artworks'))
+        .then(collection => {
+          let image;
+          collection.aggregate(
+            [
+              {
+                $match: {
+                  URL: { $ne: null },
+                  ThumbnailURL: { $exists: true, $ne: null }
+                }
+              },
+              { $sample: { size: 1 } }
+            ],
+            async (err, result) => {
+              if (err) reject(new Error(err));
+              console.log('mongo queried');
+              const {
+                Title: title,
+                Date: date,
+                Medium: medium,
+                ThumbnailURL: src,
+                URL: url
+              } = result[0];
+              const artist =
+                result[0]['Artist'].length > 1
+                  ? result[0]['Artist'].join(', ')
+                  : result[0]['Artist'];
+              const job = await getHiResQueue.add({ url });
 
-            res.locals.image = {
-              Title,
-              Artist,
-              Date,
-              Medium,
-              ThumbnailURL,
-              URL,
-              jobId: job.id
-            };
+              const imageData = {
+                title,
+                artist,
+                date,
+                medium,
+                src,
+                url,
+                jobId: job.id
+              };
 
-            next();
-          }
-        );
-      });
-  }
-};
-
-sendImage = (req, res, next) => {
-  try {
-    res.render('index', { ...res.locals.image });
-  } catch (error) {
-    res.send(`Something's wrong...`);
-  }
-  next();
+              resolve(JSON.stringify(imageData));
+            }
+          );
+        });
+    }
+  });
 };
 
 getHiRes = url => {
@@ -145,7 +137,9 @@ app
   .set('view engine', 'ejs')
   .use(express.static('public'))
   .use(bodyParser.json())
-  .get('/', getImage, sendImage);
+  .get('/', (req, res) => {
+    res.render('index');
+  });
 
 server.listen(process.env.PORT || 3000, () => {
   console.log(`app listening on localhost:3000`);

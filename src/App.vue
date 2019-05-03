@@ -16,28 +16,37 @@
 </template>
 
 <script>
-const data = window.data;
-
 export default {
   data() {
-    return data;
-  },
-  computed: {
-    imgSrc: () => this.src
+    return {
+      artist: null,
+      date: null,
+      medium: null,
+      src: null,
+      title: null,
+      url: null  
+    };
   },
   mounted: function() {
     const HOST = location.origin.replace(/^http/, 'ws')
     const ws = new WebSocket(`${HOST}/socket`);
     ws.onopen = () => {
       const message = {
-        request: 'hiRes',
-        jobId: this.jobId
-      }
+        request: 'imageData'
+      };
       ws.send(JSON.stringify(message));
     };
 
     ws.onmessage = response => {
-      this.src = response.data
+      const { jobId, ...data } = JSON.parse(response.data);
+      if (jobId) {
+        const reply = {
+          request: 'hiRes',
+          jobId
+        };
+        ws.send(JSON.stringify(reply))
+      }
+      Object.assign(this, data)
     };
   },
   methods: {
