@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="src">
     <div id="image">
       <img v-bind:src="src">
     </div>
@@ -12,6 +12,9 @@
         <div id="refresh" @click="reload"></div>
       </div>
     </a>
+  </div>
+  <div v-else>
+    <div class="loading"></div>
   </div>
 </template>
 
@@ -103,4 +106,34 @@ img,
   transform: rotate(45deg);
   content: "";
 }
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.loading:before {
+  display: block;
+  margin: 0 auto;
+  height: 40px;
+  width: 40px;
+  border: 2px solid #000000;
+  border-top: 2px solid #ffffff;
+  border-radius: 50%;
+  content: "";
+  animation: spin .5s infinite ease-in-out;
+}
+
 </style>
