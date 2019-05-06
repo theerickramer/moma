@@ -30,11 +30,10 @@ export default {
   mounted: function() {
     const HOST = location.origin.replace(/^http/, 'ws')
     const ws = new WebSocket(`${HOST}/socket`);
-    ws.onmessage = response => {
-      const { ...data } = JSON.parse(response.data);
+    ws.onmessage = message => {
+      const { ...data } = JSON.parse(message.data);
       Object.assign(this, data)
     };
-    ws.onclose = () => console.log('closed')
   },
   methods: {
     reload: () => window.location.reload()

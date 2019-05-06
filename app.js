@@ -14,7 +14,7 @@ const redis = require('redis');
 // REDIS
 const redisSubscriber = redis.createClient();
 const redisPublisher = redis.createClient();
-redisSubscriber.subscribe('jobCompletion');
+redisSubscriber.subscribe('jobCompleted');
 
 // JOB QUEUES
 const getImageDataQueue = new Queue('getImageData', process.env.REDIS_URL);
@@ -22,22 +22,28 @@ const getHiResQueue = new Queue('getHiRes', process.env.REDIS_URL);
 
 getImageDataQueue.process(() => getImage());
 getImageDataQueue.on('completed', (job, result) => {
-  const { url } = JSON.parse(result);
+  const { url, ...imgData } = JSON.parse(result);
   const message = {
     type: 'imageData',
-    result
+    jobId: job.id,
+    data: imgData
   };
-  getHiResQueue.add({ url });
-  redisPublisher.publish('jobCompletion', JSON.stringify(message));
+  getHiResQueue.add({ url, jobId: job.id });
+  redisPublisher.publish('jobCompleted', JSON.stringify(message));
 });
 
-getHiResQueue.process(job => getHiRes(job.data.url));
+getHiResQueue.process(job => {
+  const { url, jobId } = job.data;
+  return getHiRes(url, jobId);
+});
 getHiResQueue.on('completed', (job, result) => {
+  const { jobId, ...imgUrl } = JSON.parse(result);
   const message = {
     type: 'hiRes',
-    result
+    jobId,
+    data: imgUrl
   };
-  redisPublisher.publish('jobCompletion', JSON.stringify(message));
+  redisPublisher.publish('jobCompleted', JSON.stringify(message));
 });
 
 // WEB SOCKET
@@ -65,10 +71,13 @@ wss.on('connection', async ws => {
   const job = await getImageDataQueue.add();
 
   redisSubscriber.on('message', (channel, message) => {
-    const parsed = JSON.parse(message);
-    ws.send(parsed.result);
+    const { jobId, data, type } = JSON.parse(message);
+    
+    if (jobId === job.id) {
+      ws.send(JSON.stringify(data));
+    }
 
-    if (parsed.type === 'hiRes') {
+    if (type === 'hiRes') {
       ws.terminate();
       // clearInterval(interval);
     }
@@ -136,14 +145,14 @@ getImage = () => {
   });
 };
 
-getHiRes = url => {
+getHiRes = (url, jobId) => {
   return new Promise((resolve, reject) => {
     return axios.get(url).then(response => {
       console.log('moma scraped');
       asset =
         'https://moma.org' +
         $('img.picture__img--focusable', response.data).attr('src');
-      resolve(JSON.stringify({ src: asset }));
+      resolve(JSON.stringify({ src: asset, jobId }));
     });
   });
 };
