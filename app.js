@@ -12,8 +12,8 @@ const MongoClient = require('mongodb').MongoClient;
 const redis = require('redis');
 
 // REDIS
-const redisSubscriber = redis.createClient();
-const redisPublisher = redis.createClient();
+const redisSubscriber = redis.createClient(process.env.REDIS_URL);
+const redisPublisher = redis.createClient(process.env.REDIS_URL);
 redisSubscriber.subscribe('jobCompleted');
 
 // JOB QUEUES
