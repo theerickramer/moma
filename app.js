@@ -9,27 +9,63 @@ const http = require('http');
 const server = http.createServer(app);
 const WebSocketServer = require('ws').Server;
 const MongoClient = require('mongodb').MongoClient;
+const redis = require('redis');
+
+// REDIS
+const redisSubscriber = redis.createClient();
+const redisPublisher = redis.createClient();
+redisSubscriber.subscribe('jobCompleted');
+
+// JOB QUEUES
+const getImageDataQueue = new Queue('getImageData', process.env.REDIS_URL);
+const getHiResQueue = new Queue('getHiRes', process.env.REDIS_URL);
+
+getImageDataQueue.process(() => getImage());
+getImageDataQueue.on('completed', (job, result) => {
+  const { url, ...imgData } = JSON.parse(result);
+  const message = {
+    type: 'imageData',
+    jobId: job.id,
+    data: imgData
+  };
+  getHiResQueue.add({ url, jobId: job.id });
+  redisPublisher.publish('jobCompleted', JSON.stringify(message));
+});
+
+getHiResQueue.process(job => {
+  const { url, jobId } = job.data;
+  return getHiRes(url, jobId);
+});
+getHiResQueue.on('completed', (job, result) => {
+  const { jobId, ...imgUrl } = JSON.parse(result);
+  const message = {
+    type: 'hiRes',
+    jobId,
+    data: imgUrl
+  };
+  redisPublisher.publish('jobCompleted', JSON.stringify(message));
+});
 
 // WEB SOCKET
 const wss = new WebSocketServer({ server, path: '/socket' });
 
-wss.on('connection', ws => {
-  ws.on('message', jobId => {
-    let tries = 0;
-    const interval = setInterval(async () => {
-      const { returnvalue } = await getHiResQueue.getJob(jobId);
-      if (tries % 10 === 0) {
-        ws.ping('still trying...');
-      }
+wss.on('connection', async ws => {
+  const job = await getImageDataQueue.add();
+  const interval = setInterval(() => {
+    ws.ping('working...');
+  }, 29000);
 
-      if (returnvalue) {
-        ws.send(returnvalue);
-        ws.terminate();
-        clearInterval(interval);
-      } else {
-        tries++
-      }
-    }, 250);
+  redisSubscriber.on('message', (channel, message) => {
+    const { jobId, data, type } = JSON.parse(message);
+
+    if (jobId === job.id) {
+      ws.send(JSON.stringify(data));
+    }
+
+    if (type === 'hiRes') {
+      ws.terminate();
+      clearInterval(interval);
+    }
   });
 });
 
@@ -45,83 +81,75 @@ connectMongo = () => {
 connectMongo();
 
 // FUNCTIONS
-getImage = (req, res, next) => {
-  if (mongo) {
-    mongo
-      .then(db => db.collection('Artworks'))
-      .then(collection => {
-        let image;
-        collection.aggregate(
-          [
-            {
-              $match: {
-                URL: { $ne: null },
-                ThumbnailURL: { $exists: true, $ne: null }
-              }
-            },
-            { $sample: { size: 1 } }
-          ],
-          async (err, result) => {
-            if (err) reject(new Error(err));
-            console.log('mongo queried');
-            const { Title, Date, Medium, ThumbnailURL, URL } = result[0];
-            const Artist =
-              result[0]['Artist'].length > 1
-                ? result[0]['Artist'].join(', ')
-                : result[0]['Artist'];
-            const job = await getHiResQueue.add({ URL });
+getImage = () => {
+  return new Promise((resolve, reject) => {
+    if (mongo) {
+      mongo
+        .then(db => db.collection('Artworks'))
+        .then(collection => {
+          let image;
+          collection.aggregate(
+            [
+              {
+                $match: {
+                  URL: { $ne: null },
+                  ThumbnailURL: { $exists: true, $ne: null }
+                }
+              },
+              { $sample: { size: 1 } }
+            ],
+            async (err, result) => {
+              if (err) reject(new Error(err));
+              console.log('mongo queried');
+              const {
+                Title: title,
+                Date: date,
+                Medium: medium,
+                ThumbnailURL: src,
+                URL: url
+              } = result[0];
+              const artist =
+                result[0]['Artist'].length > 1
+                  ? result[0]['Artist'].join(', ')
+                  : result[0]['Artist'][0];
 
-            res.locals.image = {
-              Title,
-              Artist,
-              Date,
-              Medium,
-              ThumbnailURL,
-              URL,
-              jobId: job.id
-            };
+              const imageData = {
+                title,
+                artist,
+                date,
+                medium,
+                src,
+                url
+              };
 
-            next();
-          }
-        );
-      });
-  }
+              resolve(JSON.stringify(imageData));
+            }
+          );
+        });
+    }
+  });
 };
 
-sendImage = (req, res, next) => {
-  try {
-    res.render('index', { ...res.locals.image });
-  } catch (error) {
-    res.send(`Something's wrong...`);
-  }
-  next();
-};
-
-getHiRes = url => {
+getHiRes = (url, jobId) => {
   return new Promise((resolve, reject) => {
     return axios.get(url).then(response => {
       console.log('moma scraped');
       asset =
         'https://moma.org' +
         $('img.picture__img--focusable', response.data).attr('src');
-      resolve(asset);
+      resolve(JSON.stringify({ src: asset, jobId }));
     });
   });
 };
-
-// JOB QUEUE
-const getHiResQueue = new Queue('getHiRes', process.env.REDIS_URL);
-
-getHiResQueue.process(job => {
-  return getHiRes(job.data.URL);
-});
 
 // SERVER
 app
   .set('view engine', 'ejs')
   .use(express.static('public'))
   .use(bodyParser.json())
-  .get('/', getImage, sendImage);
+  .get('/', (req, res) => {
+    res.render('index');
+  });
 
 server.listen(process.env.PORT || 3000, () => {
   console.log(`app listening on localhost:3000`);

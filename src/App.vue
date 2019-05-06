@@ -16,24 +16,23 @@
 </template>
 
 <script>
-const data = window.data;
-
 export default {
   data() {
-    return data;
-  },
-  computed: {
-    imgSrc: () => this.src
+    return {
+      artist: null,
+      date: null,
+      medium: null,
+      src: null,
+      title: null,
+      url: null  
+    };
   },
   mounted: function() {
     const HOST = location.origin.replace(/^http/, 'ws')
     const ws = new WebSocket(`${HOST}/socket`);
-    ws.onopen = () => {
-      ws.send(this.jobId);
-    };
-
-    ws.onmessage = response => {
-      this.src = response.data
+    ws.onmessage = message => {
+      const { ...data } = JSON.parse(message.data);
+      Object.assign(this, data)
     };
   },
   methods: {
