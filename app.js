@@ -49,37 +49,22 @@ getHiResQueue.on('completed', (job, result) => {
 // WEB SOCKET
 const wss = new WebSocketServer({ server, path: '/socket' });
 
-const createQueuePoll = (queue, jobId, socket) => {
-  return () => {
-    let tries = 0;
-    const interval = setInterval(async () => {
-      const { returnvalue } = await queue.getJob(jobId);
-      if (tries % 100 === 0) {
-        socket.ping('still trying...');
-      }
-      console.log(returnvalue);
-      if (returnvalue) {
-        socket.send(returnvalue);
-      } else {
-        tries++;
-      }
-    }, 250);
-  };
-};
-
 wss.on('connection', async ws => {
   const job = await getImageDataQueue.add();
+  const interval = setInterval(() => {
+    ws.ping('working...');
+  }, 29000);
 
   redisSubscriber.on('message', (channel, message) => {
     const { jobId, data, type } = JSON.parse(message);
-    
+
     if (jobId === job.id) {
       ws.send(JSON.stringify(data));
     }
 
     if (type === 'hiRes') {
       ws.terminate();
-      // clearInterval(interval);
+      clearInterval(interval);
     }
   });
 });
