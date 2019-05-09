@@ -26,7 +26,7 @@ getImageDataQueue.on('completed', (job, result) => {
   const message = {
     type: 'imageData',
     jobId: job.id,
-    data: imgData
+    data: { ...imgData, url }
   };
   getHiResQueue.add({ url, jobId: job.id });
   redisPublisher.publish('jobCompleted', JSON.stringify(message));
