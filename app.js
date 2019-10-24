@@ -136,7 +136,7 @@ getHiRes = (url, jobId) => {
       console.log('moma scraped');
       asset =
         'https://moma.org' +
-        $('img.picture__img--focusable', response.data).attr('src');
+        $('img.picture__img--scale--focusable', response.data).attr('src');
       resolve(JSON.stringify({ src: asset, jobId }));
     });
   });
