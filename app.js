@@ -138,7 +138,6 @@ getHiRes = (url, jobId) => {
       asset =
         'https://moma.org' +
         $('source[media="(max-width: 1999px)"]', response.data).attr('srcset').split(' ')[0];
-      console.log(asset)
       resolve(JSON.stringify({ src: asset, jobId }));
     });
   });
