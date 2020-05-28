@@ -101,6 +101,7 @@ getImage = () => {
             async (err, result) => {
               if (err) reject(new Error(err));
               console.log('mongo queried');
+              console.log(result)
               const {
                 Title: title,
                 Date: date,
@@ -136,7 +137,8 @@ getHiRes = (url, jobId) => {
       console.log('moma scraped');
       asset =
         'https://moma.org' +
-        $('img.picture__img--focusable', response.data).attr('src');
+        $('source[media="(max-width: 1999px)"]', response.data).attr('srcset').split(' ')[0];
+      console.log(asset)
       resolve(JSON.stringify({ src: asset, jobId }));
     });
   });
