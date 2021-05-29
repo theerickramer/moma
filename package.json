@@ -16,7 +16,7 @@
     "mongodb": "^2.2.33",
     "redis": "^2.8.0",
     "vue": "^2.6.10",
-    "ws": "^7.0.0"
+    "ws": "^7.4.6"
   },
   "scripts": {
     "start": "node app.js",
