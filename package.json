@@ -1,10 +1,16 @@
 {
   "name": "moma",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "app.js",
   "license": "MIT",
   "engines": {
-    "node": "10.6.0"
+    "node": "16"
+  },
+  "scripts": {
+    "start": "node app.mjs",
+    "dev": "nodemon app.mjs",
+    "build": "webpack --entry ./src/index.js --output-path ./public --output-filename index.js",
+    "watch": "webpack --entry ./src/index.js --output-path ./public --output-filename index.js --watch"
   },
   "dependencies": {
     "axios": "^0.17.1",
@@ -18,18 +24,12 @@
     "vue": "^2.6.10",
     "ws": "^7.0.0"
   },
-  "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
-    "build": "webpack --entry ./src/index.js --output-path ./public --output-filename index.js",
-    "watch": "webpack --entry ./src/index.js --output-path ./public --output-filename index.js --watch"
-  },
   "devDependencies": {
-    "css-loader": "^2.1.1",
-    "vue-loader": "^15.7.0",
+    "css-loader": "^6.7.1",
+    "vue-loader": "^17.0.0",
     "vue-style-loader": "^4.1.2",
     "vue-template-compiler": "^2.6.10",
-    "webpack": "^4.29.6",
-    "webpack-cli": "^3.3.0"
+    "webpack": "^5.72.1",
+    "webpack-cli": "^4.9.2"
   }
 }
