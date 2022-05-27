@@ -11,14 +11,26 @@ import redis from "redis";
 import { MongoClient, ServerApiVersion } from "mongodb";
 
 // REDIS
-const redisSubscriber = redis.createClient(process.env.REDIS_URL);
-const redisPublisher = redis.createClient(process.env.REDIS_URL);
+const redisSubscriber = redis.createClient({ url: process.env.REDIS_URL });
+const redisPublisher = redis.createClient({ url: process.env.REDIS_URL });
 await redisPublisher.connect();
 await redisSubscriber.connect();
 
 // JOB QUEUES
-const getImageDataQueue = new Queue("getImageData", process.env.REDIS_URL);
-const getHiResQueue = new Queue("getHiRes", process.env.REDIS_URL);
+const getImageDataQueue = new Queue("getImageData", {
+  redis: {
+    port: process.env.REDIS_PORT,
+    host: process.env.REDIS_HOST,
+    password: process.env.REDIS_PASSWORD
+  }
+});
+const getHiResQueue = new Queue("getHiRes", {
+  redis: {
+    port: process.env.REDIS_PORT,
+    host: process.env.REDIS_HOST,
+    password: process.env.REDIS_PASSWORD
+  }
+});
 
 getImageDataQueue.process(() => getImage());
 getImageDataQueue.on("completed", async (job, result) => {
