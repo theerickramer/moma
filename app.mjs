@@ -13,6 +13,9 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 // REDIS
 const redisSubscriber = redis.createClient({ url: process.env.REDIS_URL });
 const redisPublisher = redis.createClient({ url: process.env.REDIS_URL });
+const onRedisError = err => console.error(err);
+redisSubscriber.on("error", onRedisError);
+redisPublisher.on("error", onRedisError);
 await redisPublisher.connect();
 await redisSubscriber.connect();
 
