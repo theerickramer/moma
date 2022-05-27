@@ -1,3 +1,4 @@
+import "dotenv/config";
 import cheerio from "cheerio";
 import axios from "axios";
 import bodyParser from "body-parser";
@@ -104,8 +105,8 @@ const getImage = () => {
     if (mongo) {
       mongo.connect(async _err => {
         const collection = await mongo
-          .db("heroku_5bj44w4g")
-          .collection("Artworks");
+          .db(process.env.MONGODB_DATABASE)
+          .collection(process.env.MONGODB_COLLECTION);
         const result = await collection
           .aggregate([
             {
@@ -171,5 +172,5 @@ app
   });
 
 server.listen(process.env.PORT || 3000, () => {
-  console.log(`app listening on localhost:3000`);
+  console.log(`app listening on http://localhost:3000`);
 });
