@@ -148,17 +148,20 @@ const getImage = () => {
 
 const getHiRes = (url, jobId) => {
   return new Promise((resolve, _reject) => {
-    return axios.get(url).then(response => {
-      console.log("moma scraped");
-      const $ = cheerio.load(response.data);
-      const asset =
-        "https://moma.org" +
-        $("img")
-          .attr("src")
-          .split("?")[0];
-      console.log(asset);
-      resolve(JSON.stringify({ src: asset, jobId }));
-    });
+    return axios
+      .get(url)
+      .then(response => {
+        console.log("moma scraped");
+        const $ = cheerio.load(response.data);
+        const asset =
+          "https://moma.org" +
+          $("img")
+            .attr("src")
+            .split("?")[0];
+        console.log(asset);
+        resolve(JSON.stringify({ src: asset, jobId }));
+      })
+      .catch(err => console.log(err));
   });
 };
 
